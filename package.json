@@ -13,7 +13,6 @@
     "jest": "^27.4.5",
     "nodemon": "^2.0.15"
   },
-  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/greg1494/note-taker.git"
