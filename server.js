@@ -3,84 +3,74 @@ const path = require('path');
 const fs = require('fs');
 // Helper method for generating unique ids
 const uuid = require('./helpers/uuid');
-
 const PORT = process.env.PORT || 3001
-
 const app = express();
+
+const { notes } = require('./data/notes.json');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static('public'));
 
-// GET request for notes
-app.get('/notes', (req, res) => {
-    res.sendFile(path.join(__dirname, '/public/notes.html'));
-});
-
-app.get('*', (req, res) =>
-  res.sendFile(path.join(__dirname, '/public/index.html'))
-);
 
 // GET request for notes
 app.get('/api/notes', (req, res) => {
-    // Send a message to the client
-    res.json(`${req.method} request received to get note`);
-  
-    // Log our request to the terminal
-    console.info(`${req.method} request received to get note`);
+  let results = notes;
+  console.log(req.query);
+
+  res.json(results);
 });
 
-app.post('/api/notes', (req, res) => {
-    // Log that a POST request was received
-    console.info(`${req.method} request received to add a note`);
-  
-    // Destructuring assignment for the items in req.body
-    const { title, text } = req.body;
-  
-    // If all the required properties are present
-    if (title, text) {
-      // Variable for the object we will save
-      const activeNote = {
-        title,
-        text,
-        review_id: uuid(),
-      };
-  
-      // Obtain existing notes
-      fs.readFile('./data/notes.json', 'utf8', (err, data) => {
-        if (err) {
-          console.error(err);
-        } else {
-          // Convert string into JSON object
-          const parsedNotes = JSON.parse(data);
-  
-          // Add a new Note
-          parsedNotes.push(activeNote);
-  
-          // Write updated reviews back to the file
-          fs.writeFile(
-            './data/notes.json',
-            JSON.stringify(parsedNotes, null, 4),
-            (writeErr) =>
-              writeErr
-                ? console.error(writeErr)
-                : console.info('Successfully updated reviews!')
-          );
-        }
-      });
-  
-      const response = {
-        status: 'success',
-        body: activeNote,
-      };
-  
-      console.log(response);
-      res.json(response);
-    } else {
-      res.json('Error in posting review');
-    }
+app.get('/api/notes/:id', (req, res) => {
+  const result = findById(req.params.id, notes);
+  res.json(result);
   });
+
+function findById(id, notesArray) {
+  const result = notesArray.filter(note => note.id === id)[0];
+  return result;
+};
+
+function createNewNote(body, notesArray) {
+  const note = body
+  notesArray.push(note)
+  fs.writeFileSync(
+    path.join(__dirname, './data/notes.json'),
+    JSON.stringify({ notes: notesArray }, null, 2)
+    )
+    return note
+};
+
+app.post('/api/notes', (req, res) => {
+    console.log(req.body)
+    // Increment ID based on array length
+    req.body.id = notes.length.toString();
+
+    const note = createNewNote(req.body, notes);
+    res.json(note);
+});
+
+// rework and try to refresh page
+app.delete('/api/notes/:id', (req, res) => {
+  const updateArray = notes.filter(({ id }) => id !== req.params.id)
+  console.log(updateArray)
+  fs.writeFileSync(
+      path.join(__dirname, './data/notes.json'),
+      JSON.stringify({ notes: updateArray}, null, 2)
+  )
+  res.json({ok: true})
+});
+
+// Route for index.html
+app.get('/', (req, res) =>
+  res.sendFile(path.join(__dirname, '/public/index.html'))
+);
+
+// Route for notes.html
+app.get('/notes', (req, res) => {
+  res.sendFile(path.join(__dirname, '/public/notes.html'));
+});
 
 app.listen(PORT, () =>
   console.log(`App listening at http://localhost:${PORT} 🚀`)
